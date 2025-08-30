@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -106,7 +105,6 @@ export function TableViewer({ initialTable, tableId }: TableViewerProps) {
   };
   
   const nonEmptyRows = useMemo(() => tableData.rows.filter(row => row.some(cell => cell.trim() !== '')), [tableData.rows]);
-  const hasSummary = tableData.total || tableData.vat || tableData.grandTotal;
 
   return (
     <Card className="shadow-lg">
@@ -199,28 +197,6 @@ export function TableViewer({ initialTable, tableId }: TableViewerProps) {
           </div>
         )}
       </CardContent>
-      {hasSummary && (
-        <CardFooter className="flex-col items-end gap-2">
-            {tableData.total && (
-                <div className="flex w-1/3 justify-between font-medium">
-                    <span>Total:</span>
-                    <span>{tableData.total}</span>
-                </div>
-            )}
-            {tableData.vat && (
-                <div className="flex w-1/3 justify-between font-medium">
-                    <span>VAT:</span>
-                    <span>{tableData.vat}</span>
-                </div>
-            )}
-            {tableData.grandTotal && (
-                <div className="flex w-1/3 justify-between font-bold text-lg">
-                    <span>Grand Total:</span>
-                    <span>{tableData.grandTotal}</span>
-                </div>
-            )}
-        </CardFooter>
-      )}
     </Card>
   );
 }

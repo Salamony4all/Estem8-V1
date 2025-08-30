@@ -21,10 +21,7 @@ export type ExtractTablesFromPdfInput = z.infer<typeof ExtractTablesFromPdfInput
 
 const TableSchema = z.object({
   columnNames: z.array(z.string()).describe('The names of the columns in the table'),
-  rows: z.array(z.array(z.string())).describe('The rows of the table, with each row being an array of strings representing the cells'),
-  total: z.string().optional().describe('The total amount from the table, if present.'),
-  vat: z.string().optional().describe('The VAT amount from the table, if present.'),
-  grandTotal: z.string().optional().describe('The grand total amount from the table, if present.'),
+  rows: z.array(z.array(z.string())).describe('The rows of the table, with each row being an array of strings representing the cells. This should include any summary rows like Total, Discounts, VAT, and Grand Total.'),
 });
 
 const ExtractTablesFromPdfOutputSchema = z.object({
@@ -44,7 +41,7 @@ const prompt = ai.definePrompt({
 
 You will receive a PDF document as a data URI. Your task is to identify and extract all tables from the document.
 
-For each table, identify the column names and the rows of data. If the table contains summary information like a subtotal, total, VAT (or sales tax), and grand total, extract those values as well.
+For each table, identify the column names and the rows of data. If the table contains summary information like a subtotal, total, discounts, VAT (or sales tax), and grand total, include those as the last rows of the table data. Ensure the summary rows have empty cells for columns where the summary label (e.g., "Total") doesn't apply.
 
 Return the extracted tables in a JSON format as described by the ExtractTablesFromPdfOutputSchema schema.
 
