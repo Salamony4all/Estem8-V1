@@ -16,8 +16,13 @@ import { ClientDetailsCard } from '@/components/client-details-card';
 import { format } from 'date-fns';
 
 type Table = ExtractTablesFromPdfOutput['tables'][0];
+type Currency = {
+  code: string;
+  rate: number;
+  symbol: string;
+};
 
-const currencies = [
+const currencies: Currency[] = [
   { code: 'OMR', rate: 1, symbol: 'OMR' },
   { code: 'USD', rate: 2.6, symbol: '$' },
   { code: 'EUR', rate: 2.8, symbol: '€' },
@@ -35,7 +40,8 @@ export default function Home() {
   const [freight, setFreight] = useState(5);
   const [customs, setCustoms] = useState(2);
   const [installation, setInstallation] = useState(3);
-  const [selectedCurrency, setSelectedCurrency] = useState(currencies[0]);
+  const [fromCurrency, setFromCurrency] = useState(currencies[0]);
+  const [toCurrency, setToCurrency] = useState(currencies[0]);
 
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [refNo, setRefNo] = useState('');
@@ -118,6 +124,8 @@ export default function Home() {
     const amountIndex = findAmountColumn(initialTable.columnNames);
     if (amountIndex === -1) return initialTable;
 
+    const exchangeRate = toCurrency.rate / fromCurrency.rate;
+
     const newRows = initialTable.rows.map((row) => {
       const newRow = [...row];
       const amountStr = newRow[amountIndex]?.replace(/[^0-9.-]+/g, '');
@@ -132,14 +140,14 @@ export default function Home() {
           (1 + customs / 100) *
           (1 + installation / 100);
         
-        const exchangedAmount = finalAmount * selectedCurrency.rate;
+        const exchangedAmount = finalAmount * exchangeRate;
         newRow[amountIndex] = exchangedAmount.toFixed(2);
       }
       return newRow;
     });
 
     return { ...initialTable, rows: newRows };
-  }, [tables, netMargin, freight, customs, installation, selectedCurrency]);
+  }, [tables, netMargin, freight, customs, installation, fromCurrency, toCurrency]);
 
   const renderContent = () => {
     if (isLoading) {
@@ -194,8 +202,10 @@ export default function Home() {
           <CostingCard
             costingFactors={costingFactors}
             setters={{ setNetMargin, setFreight, setCustoms, setInstallation }}
-            currency={selectedCurrency}
-            setCurrency={setSelectedCurrency}
+            fromCurrency={fromCurrency}
+            toCurrency={toCurrency}
+            setFromCurrency={setFromCurrency}
+            setToCurrency={setToCurrency}
             currencies={currencies}
           />
 
@@ -223,7 +233,7 @@ export default function Home() {
                   initialTable={quotationTable}
                   tableId="quotation-table"
                   isQuotation
-                  currencySymbol={selectedCurrency.symbol}
+                  currencySymbol={toCurrency.symbol}
                 />
                 <ExportCard
                   tableData={quotationTable}

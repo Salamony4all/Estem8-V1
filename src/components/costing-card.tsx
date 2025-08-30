@@ -37,16 +37,20 @@ interface CostingCardProps {
     setCustoms: (value: number) => void;
     setInstallation: (value: number) => void;
   };
-  currency: Currency;
-  setCurrency: (currency: Currency) => void;
+  fromCurrency: Currency;
+  toCurrency: Currency;
+  setFromCurrency: (currency: Currency) => void;
+  setToCurrency: (currency: Currency) => void;
   currencies: Currency[];
 }
 
 export function CostingCard({
   costingFactors,
   setters,
-  currency,
-  setCurrency,
+  fromCurrency,
+  toCurrency,
+  setFromCurrency,
+  setToCurrency,
   currencies,
 }: CostingCardProps) {
   const { netMargin, freight, customs, installation } = costingFactors;
@@ -74,6 +78,14 @@ export function CostingCard({
       setter: setInstallation,
     },
   ];
+
+  const handleCurrencyChange = (setter: (currency: Currency) => void) => (value: string) => {
+    const selected = currencies.find((c) => c.code === value);
+    if (selected) {
+      setter(selected);
+    }
+  };
+
 
   return (
     <Card className="shadow-lg">
@@ -140,19 +152,15 @@ export function CostingCard({
             ))}
           </div>
         </div>
-
-        <div className="space-y-3 pt-4">
-            <Label htmlFor="currency-select">Currency</Label>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+          <div className="space-y-3">
+            <Label htmlFor="from-currency-select">From Currency</Label>
             <Select
-              value={currency.code}
-              onValueChange={(value) => {
-                const selected = currencies.find((c) => c.code === value);
-                if (selected) {
-                  setCurrency(selected);
-                }
-              }}
+              value={fromCurrency.code}
+              onValueChange={handleCurrencyChange(setFromCurrency)}
             >
-              <SelectTrigger id="currency-select" className="w-full">
+              <SelectTrigger id="from-currency-select" className="w-full">
                 <SelectValue placeholder="Select Currency" />
               </SelectTrigger>
               <SelectContent>
@@ -164,6 +172,26 @@ export function CostingCard({
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-3">
+            <Label htmlFor="to-currency-select">To Currency</Label>
+            <Select
+              value={toCurrency.code}
+              onValueChange={handleCurrencyChange(setToCurrency)}
+            >
+              <SelectTrigger id="to-currency-select" className="w-full">
+                <SelectValue placeholder="Select Currency" />
+              </SelectTrigger>
+              <SelectContent>
+                {currencies.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.code} ({c.symbol})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
       </CardContent>
     </Card>
   );
