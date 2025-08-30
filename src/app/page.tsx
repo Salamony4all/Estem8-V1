@@ -10,6 +10,7 @@ import { FileUploader } from '@/components/file-uploader';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TableViewer } from '@/components/table-viewer';
+import { CostingCard } from '@/components/costing-card';
 
 type Table = ExtractTablesFromPdfOutput['tables'][0];
 
@@ -18,6 +19,11 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const [netMargin, setNetMargin] = useState(10);
+  const [freight, setFreight] = useState(5);
+  const [customs, setCustoms] = useState(2);
+  const [installation, setInstallation] = useState(3);
 
   const handleFileUpload = async (file: File) => {
     setIsLoading(true);
@@ -90,25 +96,52 @@ export default function Home() {
     }
 
     if (tables) {
+      const costingFactors = { netMargin, freight, customs, installation };
       return (
         <div className="space-y-6">
           <div className="flex justify-end">
             <Button onClick={handleReset}>Process Another File</Button>
           </div>
-          <Tabs defaultValue="table-0" className="w-full">
-            <TabsList className="grid w-full grid-cols-1" style={{gridTemplateColumns: `repeat(${tables.length}, minmax(0, 1fr))`}}>
-              {tables.map((_, index) => (
-                <TabsTrigger key={index} value={`table-${index}`}>
-                  Table {index + 1}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {tables.map((table, index) => (
-              <TabsContent key={index} value={`table-${index}`}>
-                <TableViewer initialTable={table} tableId={`table-${index}`} />
-              </TabsContent>
-            ))}
-          </Tabs>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-1">
+              <CostingCard
+                costingFactors={costingFactors}
+                setters={{ setNetMargin, setFreight, setCustoms, setInstallation }}
+              />
+            </div>
+            <div className="lg:col-span-2">
+              <Tabs defaultValue="table-0" className="w-full">
+                <TabsList
+                  className="grid w-full grid-cols-1"
+                  style={{ gridTemplateColumns: `repeat(${tables.length}, minmax(0, 1fr))` }}
+                >
+                  {tables.map((_, index) => (
+                    <TabsTrigger key={index} value={`table-${index}`}>
+                      Extracted Table {index + 1}
+                    </TabsTrigger>
+                  ))}
+                  <TabsTrigger value="quotation-table">Quotation</TabsTrigger>
+                </TabsList>
+                {tables.map((table, index) => (
+                  <TabsContent key={index} value={`table-${index}`}>
+                    <TableViewer
+                      initialTable={table}
+                      tableId={`table-${index}`}
+                      isQuotation={false}
+                    />
+                  </TabsContent>
+                ))}
+                <TabsContent value="quotation-table">
+                  <TableViewer
+                    initialTable={tables[0]}
+                    tableId="quotation-table"
+                    costingFactors={costingFactors}
+                    isQuotation={true}
+                  />
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
         </div>
       );
     }

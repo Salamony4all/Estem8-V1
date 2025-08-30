@@ -28,9 +28,31 @@ type TableData = ExtractTablesFromPdfOutput['tables'][0];
 interface TableViewerProps {
   initialTable: TableData;
   tableId: string;
+  isQuotation: boolean;
+  costingFactors?: {
+    netMargin: number;
+    freight: number;
+    customs: number;
+    installation: number;
+  };
 }
 
-export function TableViewer({ initialTable, tableId }: TableViewerProps) {
+const findAmountColumn = (columnNames: string[]): number => {
+  const possibleNames = ['amount', 'price', 'total', 'cost'];
+  let amountIndex = -1;
+  for (const name of possibleNames) {
+    amountIndex = columnNames.findIndex((col) => col.toLowerCase().includes(name));
+    if (amountIndex !== -1) break;
+  }
+  return amountIndex === -1 ? columnNames.length - 1 : amountIndex;
+};
+
+export function TableViewer({
+  initialTable,
+  tableId,
+  isQuotation,
+  costingFactors,
+}: TableViewerProps) {
   const [tableData, setTableData] = useState<TableData>(initialTable);
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
   const [editingHeader, setEditingHeader] = useState<number | null>(null);
@@ -103,33 +125,67 @@ export function TableViewer({ initialTable, tableId }: TableViewerProps) {
       setIsSuggesting(false);
     }
   };
-  
-  const nonEmptyRows = useMemo(() => tableData.rows.filter(row => row.some(cell => cell.trim() !== '')), [tableData.rows]);
+
+  const processedTable = useMemo(() => {
+    if (!isQuotation || !costingFactors) {
+      return tableData;
+    }
+
+    const amountIndex = findAmountColumn(tableData.columnNames);
+    if (amountIndex === -1) return tableData;
+
+    const newRows = tableData.rows.map((row) => {
+      const newRow = [...row];
+      const amountStr = newRow[amountIndex]?.replace(/[^0-9.-]+/g, '');
+      const amount = parseFloat(amountStr);
+
+      if (!isNaN(amount)) {
+        const { netMargin, freight, customs, installation } = costingFactors;
+        const finalAmount =
+          amount *
+          (1 + netMargin / 100) *
+          (1 + freight / 100) *
+          (1 + customs / 100) *
+          (1 + installation / 100);
+        newRow[amountIndex] = finalAmount.toFixed(2);
+      }
+      return newRow;
+    });
+
+    return { ...tableData, rows: newRows };
+  }, [tableData, isQuotation, costingFactors]);
+
+  const nonEmptyRows = useMemo(
+    () => processedTable.rows.filter((row) => row.some((cell) => cell.trim() !== '')),
+    [processedTable.rows]
+  );
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle>Editable Table Preview</CardTitle>
+            <CardTitle>
+              {isQuotation ? 'Quotation Table' : 'Editable Table Preview'}
+            </CardTitle>
             <CardDescription>
-              Double-click any cell to edit its content.
+              {isQuotation
+                ? 'Final costs after applying adjustments.'
+                : 'Double-click any cell to edit its content.'}
             </CardDescription>
           </div>
-          <div className="flex flex-shrink-0 gap-2">
-            <Button
-              onClick={handleSuggestNames}
-              disabled={isSuggesting}
-              variant="outline"
-            >
-              {isSuggesting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="mr-2 h-4 w-4" />
-              )}
-              Suggest Names
-            </Button>
-          </div>
+          {!isQuotation && (
+            <div className="flex flex-shrink-0 gap-2">
+              <Button onClick={handleSuggestNames} disabled={isSuggesting} variant="outline">
+                {isSuggesting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Suggest Names
+              </Button>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -137,13 +193,16 @@ export function TableViewer({ initialTable, tableId }: TableViewerProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                {tableData.columnNames.map((name, colIndex) => (
+                {processedTable.columnNames.map((name, colIndex) => (
                   <TableHead
                     key={colIndex}
-                    onDoubleClick={() => setEditingHeader(colIndex)}
-                    className="cursor-pointer whitespace-nowrap bg-muted/50"
+                    onDoubleClick={() => !isQuotation && setEditingHeader(colIndex)}
+                    className={cn(
+                      'whitespace-nowrap bg-muted/50',
+                      !isQuotation && 'cursor-pointer'
+                    )}
                   >
-                    {editingHeader === colIndex ? (
+                    {editingHeader === colIndex && !isQuotation ? (
                       <Input
                         autoFocus
                         defaultValue={name}
@@ -167,10 +226,14 @@ export function TableViewer({ initialTable, tableId }: TableViewerProps) {
                   {row.map((cell, colIndex) => (
                     <TableCell
                       key={colIndex}
-                      onDoubleClick={() => setEditingCell({ row: rowIndex, col: colIndex })}
-                      className="cursor-pointer"
+                      onDoubleClick={() =>
+                        !isQuotation && setEditingCell({ row: rowIndex, col: colIndex })
+                      }
+                      className={cn(!isQuotation && 'cursor-pointer')}
                     >
-                      {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
+                      {editingCell?.row === rowIndex &&
+                      editingCell?.col === colIndex &&
+                      !isQuotation ? (
                         <Input
                           autoFocus
                           defaultValue={cell}
