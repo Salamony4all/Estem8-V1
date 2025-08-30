@@ -21,9 +21,8 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Sparkles, FileSpreadsheet, FileText } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { exportToExcel, exportToPdf } from '@/lib/export';
 
 type TableData = ExtractTablesFromPdfOutput['tables'][0];
 
@@ -131,20 +130,6 @@ export function TableViewer({ initialTable, tableId }: TableViewerProps) {
                 <Sparkles className="mr-2 h-4 w-4" />
               )}
               Suggest Names
-            </Button>
-            <Button
-              onClick={() => exportToExcel(tableData, `${tableId}.xlsx`)}
-              variant="outline"
-            >
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Excel
-            </Button>
-            <Button
-              onClick={() => exportToPdf(tableData, `${tableId}.pdf`)}
-              variant="outline"
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              PDF
             </Button>
           </div>
         </div>
