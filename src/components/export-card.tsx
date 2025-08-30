@@ -32,7 +32,10 @@ export function ExportCard({ tableData, tableName }: ExportCardProps) {
 
   const handleExportPdf = () => {
     const doc = new jsPDF() as jsPDFWithAutoTable;
+    doc.setFontSize(20);
+    doc.text('Alshaya Enterprise', 14, 22);
     doc.autoTable({
+      startY: 30,
       head: [tableData.columnNames],
       body: tableData.rows,
     });
