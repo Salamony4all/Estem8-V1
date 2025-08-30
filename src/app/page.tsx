@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TableViewer } from '@/components/table-viewer';
 import { CostingCard } from '@/components/costing-card';
 import { ExportCard } from '@/components/export-card';
+import { ClientDetailsCard } from '@/components/client-details-card';
+import { format } from 'date-fns';
 
 type Table = ExtractTablesFromPdfOutput['tables'][0];
 
@@ -26,6 +28,20 @@ export default function Home() {
   const [freight, setFreight] = useState(5);
   const [customs, setCustoms] = useState(2);
   const [installation, setInstallation] = useState(3);
+
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [refNo, setRefNo] = useState('');
+  const [projectName, setProjectName] = useState('');
+  const [contactPerson, setContactPerson] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+
+  const clientDetails = {
+    date: date ? format(date, 'PPP') : '',
+    refNo,
+    projectName,
+    contactPerson,
+    contactNumber,
+  };
 
   const handleFileUpload = async (file: File) => {
     setIsLoading(true);
@@ -170,6 +186,17 @@ export default function Home() {
             setters={{ setNetMargin, setFreight, setCustoms, setInstallation }}
           />
 
+          <ClientDetailsCard
+            details={{ date, refNo, projectName, contactPerson, contactNumber }}
+            setters={{
+              setDate,
+              setRefNo,
+              setProjectName,
+              setContactPerson,
+              setContactNumber,
+            }}
+          />
+
           <div className="flex flex-col items-center gap-6">
             {!showQuotation && (
               <Button size="lg" onClick={() => setShowQuotation(true)}>
@@ -187,6 +214,7 @@ export default function Home() {
                 <ExportCard
                   tableData={quotationTable}
                   tableName="quotation"
+                  clientDetails={clientDetails}
                 />
               </div>
             )}

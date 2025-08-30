@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
 
-// This is a workaround for jspdf-autotable in Next.js
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
 }
@@ -17,14 +16,35 @@ type TableData = {
   rows: string[][];
 };
 
+type ClientDetails = {
+  date: string;
+  refNo: string;
+  projectName: string;
+  contactPerson: string;
+  contactNumber: string;
+};
+
 interface ExportCardProps {
   tableData: TableData;
   tableName: string;
+  clientDetails: ClientDetails;
 }
 
-export function ExportCard({ tableData, tableName }: ExportCardProps) {
+export function ExportCard({ tableData, tableName, clientDetails }: ExportCardProps) {
   const handleExportExcel = () => {
-    const worksheet = XLSX.utils.aoa_to_sheet([tableData.columnNames, ...tableData.rows]);
+    const wsData = [
+      ['Alshaya Enterprise'],
+      [],
+      ['Date', clientDetails.date],
+      ['Ref. No.', clientDetails.refNo],
+      ['Project Name', clientDetails.projectName],
+      ['Contact Person', clientDetails.contactPerson],
+      ['Contact Number', clientDetails.contactNumber],
+      [],
+      tableData.columnNames,
+      ...tableData.rows,
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(wsData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
     XLSX.writeFile(workbook, `${tableName}.xlsx`);
@@ -32,10 +52,33 @@ export function ExportCard({ tableData, tableName }: ExportCardProps) {
 
   const handleExportPdf = () => {
     const doc = new jsPDF() as jsPDFWithAutoTable;
+
     doc.setFontSize(20);
     doc.text('Alshaya Enterprise', 14, 22);
+    doc.setFontSize(10);
+    
+    const clientDetailsYStart = 35;
+    const clientDetailsData = [
+      ['Date:', clientDetails.date, 'Project Name:', clientDetails.projectName],
+      ['Ref. No.:', clientDetails.refNo, 'Contact Person:', clientDetails.contactPerson],
+      ['', '', 'Contact Number:', clientDetails.contactNumber],
+    ];
+
     doc.autoTable({
-      startY: 30,
+        body: clientDetailsData,
+        startY: clientDetailsYStart,
+        theme: 'plain',
+        styles: { fontSize: 10, cellPadding: 1 },
+        columnStyles: {
+            0: { fontStyle: 'bold' },
+            2: { fontStyle: 'bold' }
+        }
+    });
+
+    const tableStartY = (doc as any).lastAutoTable.finalY + 10;
+
+    doc.autoTable({
+      startY: tableStartY,
       head: [tableData.columnNames],
       body: tableData.rows,
     });
