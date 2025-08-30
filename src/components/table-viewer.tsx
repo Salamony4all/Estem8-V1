@@ -30,12 +30,14 @@ interface TableViewerProps {
   initialTable: TableData;
   tableId: string;
   isQuotation?: boolean;
+  currencySymbol?: string;
 }
 
 export function TableViewer({
   initialTable,
   tableId,
   isQuotation = false,
+  currencySymbol,
 }: TableViewerProps) {
   const [tableData, setTableData] = useState<TableData>(initialTable);
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
@@ -119,13 +121,21 @@ export function TableViewer({
     [tableData.rows]
   );
 
+  const quotationTitle = useMemo(() => {
+    let title = 'Quotation Table';
+    if (isQuotation && currencySymbol) {
+      title += ` (in ${currencySymbol})`;
+    }
+    return title;
+  }, [isQuotation, currencySymbol]);
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle>
-              {isQuotation ? 'Quotation Table' : 'Editable Table Preview'}
+              {isQuotation ? quotationTitle : 'Editable Table Preview'}
             </CardTitle>
             <CardDescription>
               {isQuotation

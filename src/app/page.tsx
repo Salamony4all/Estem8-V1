@@ -17,6 +17,13 @@ import { format } from 'date-fns';
 
 type Table = ExtractTablesFromPdfOutput['tables'][0];
 
+const currencies = [
+  { code: 'OMR', rate: 1, symbol: 'OMR' },
+  { code: 'USD', rate: 2.6, symbol: '$' },
+  { code: 'EUR', rate: 2.8, symbol: '€' },
+  { code: 'AED', rate: 9.55, symbol: 'AED' },
+];
+
 export default function Home() {
   const [tables, setTables] = useState<Table[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,6 +35,7 @@ export default function Home() {
   const [freight, setFreight] = useState(5);
   const [customs, setCustoms] = useState(2);
   const [installation, setInstallation] = useState(3);
+  const [selectedCurrency, setSelectedCurrency] = useState(currencies[0]);
 
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [refNo, setRefNo] = useState('');
@@ -123,13 +131,15 @@ export default function Home() {
           (1 + freight / 100) *
           (1 + customs / 100) *
           (1 + installation / 100);
-        newRow[amountIndex] = finalAmount.toFixed(2);
+        
+        const exchangedAmount = finalAmount * selectedCurrency.rate;
+        newRow[amountIndex] = exchangedAmount.toFixed(2);
       }
       return newRow;
     });
 
     return { ...initialTable, rows: newRows };
-  }, [tables, netMargin, freight, customs, installation]);
+  }, [tables, netMargin, freight, customs, installation, selectedCurrency]);
 
   const renderContent = () => {
     if (isLoading) {
@@ -184,6 +194,9 @@ export default function Home() {
           <CostingCard
             costingFactors={costingFactors}
             setters={{ setNetMargin, setFreight, setCustoms, setInstallation }}
+            currency={selectedCurrency}
+            setCurrency={setSelectedCurrency}
+            currencies={currencies}
           />
 
           <ClientDetailsCard
@@ -210,6 +223,7 @@ export default function Home() {
                   initialTable={quotationTable}
                   tableId="quotation-table"
                   isQuotation
+                  currencySymbol={selectedCurrency.symbol}
                 />
                 <ExportCard
                   tableData={quotationTable}

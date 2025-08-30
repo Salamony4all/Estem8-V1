@@ -10,6 +10,19 @@ import {
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+type Currency = {
+  code: string;
+  rate: number;
+  symbol: string;
+};
 
 interface CostingCardProps {
   costingFactors: {
@@ -24,9 +37,18 @@ interface CostingCardProps {
     setCustoms: (value: number) => void;
     setInstallation: (value: number) => void;
   };
+  currency: Currency;
+  setCurrency: (currency: Currency) => void;
+  currencies: Currency[];
 }
 
-export function CostingCard({ costingFactors, setters }: CostingCardProps) {
+export function CostingCard({
+  costingFactors,
+  setters,
+  currency,
+  setCurrency,
+  currencies,
+}: CostingCardProps) {
   const { netMargin, freight, customs, installation } = costingFactors;
   const { setNetMargin, setFreight, setCustoms, setInstallation } = setters;
 
@@ -60,32 +82,88 @@ export function CostingCard({ costingFactors, setters }: CostingCardProps) {
         <CardDescription>Adjust the percentages to calculate the final quote.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {costItems.map(({ label, value, setter }) => (
-          <div key={label} className="space-y-3">
-            <div className="flex justify-between items-center">
-              <Label htmlFor={`${label}-slider`}>{label}</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  className="w-20 h-8"
-                  value={value}
-                  onChange={(e) => setter(Number(e.target.value))}
-                  min="0"
-                  max="100"
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            {costItems.slice(0, 2).map(({ label, value, setter }) => (
+              <div key={label} className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor={`${label}-slider`}>{label}</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      className="w-20 h-8"
+                      value={value}
+                      onChange={(e) => setter(Number(e.target.value))}
+                      min="0"
+                      max="100"
+                    />
+                    <span className="text-muted-foreground">%</span>
+                  </div>
+                </div>
+                <Slider
+                  id={`${label}-slider`}
+                  value={[value]}
+                  onValueChange={(values) => setter(values[0])}
+                  min={0}
+                  max={100}
+                  step={1}
                 />
-                 <span className="text-muted-foreground">%</span>
               </div>
-            </div>
-            <Slider
-              id={`${label}-slider`}
-              value={[value]}
-              onValueChange={(values) => setter(values[0])}
-              min={0}
-              max={100}
-              step={1}
-            />
+            ))}
           </div>
-        ))}
+          <div className="space-y-6">
+            {costItems.slice(2, 4).map(({ label, value, setter }) => (
+              <div key={label} className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor={`${label}-slider`}>{label}</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      className="w-20 h-8"
+                      value={value}
+                      onChange={(e) => setter(Number(e.target.value))}
+                      min="0"
+                      max="100"
+                    />
+                    <span className="text-muted-foreground">%</span>
+                  </div>
+                </div>
+                <Slider
+                  id={`${label}-slider`}
+                  value={[value]}
+                  onValueChange={(values) => setter(values[0])}
+                  min={0}
+                  max={100}
+                  step={1}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3 pt-4">
+            <Label htmlFor="currency-select">Currency</Label>
+            <Select
+              value={currency.code}
+              onValueChange={(value) => {
+                const selected = currencies.find((c) => c.code === value);
+                if (selected) {
+                  setCurrency(selected);
+                }
+              }}
+            >
+              <SelectTrigger id="currency-select" className="w-full">
+                <SelectValue placeholder="Select Currency" />
+              </SelectTrigger>
+              <SelectContent>
+                {currencies.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.code} ({c.symbol})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
       </CardContent>
     </Card>
   );
