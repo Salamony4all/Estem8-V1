@@ -202,10 +202,7 @@ export default function Home() {
     <div className="min-h-screen">
       <main className="container mx-auto px-4 py-8 md:py-12">
         <header className="mb-12 text-center">
-          <div className="inline-flex items-center justify-center gap-3">
-            <Icons.logo className="h-10 w-10 text-primary" />
-            <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">Tabular.ai</h1>
-          </div>
+          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">Alshaya Enterprise</h1>
           <p className="mt-4 text-lg text-muted-foreground md:text-xl">
             Extract, edit, and export tables from your PDFs with the power of AI.
           </p>
