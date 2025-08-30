@@ -82,6 +82,40 @@ export function ExportCard({ tableData, tableName, clientDetails }: ExportCardPr
       head: [tableData.columnNames],
       body: tableData.rows,
     });
+    
+    const footerStartY = (doc as any).lastAutoTable.finalY + 20;
+    const footerText = [
+      "Mohamed Abdelsalam",
+      "",
+      "Sr.Sales Consultant",
+      "",
+      "Oman 70 Building , Al-Ghubra,",
+      "P.O Box 135 , Postal Code 103, Muscat, Oman.",
+      "Alshaya Enterprises®",
+      "",
+      "Phone: (+968) : (+968) 24501943 Ext. 6004",
+      "Mobile: (+968) 98901384 - 93319809",
+      "",
+      "www.alshayaenterprises.com",
+      "",
+      "www.facebook.com/AlshayaEnterprises/ | www.instagram.com/alshayaenterprises/",
+    ];
+    
+    const disclaimerText = "Disclaimer: This communication doesn’t constitute any binding commitment on behalf of our company and is subject to contract and final board approval in accordance with our internal procedures.";
+
+    doc.setFontSize(8);
+    let currentY = footerStartY;
+    
+    footerText.forEach(line => {
+      doc.text(line, 14, currentY);
+      currentY += 4;
+    });
+
+    currentY += 4; // Extra space before disclaimer
+    doc.setFontSize(7);
+    const splitDisclaimer = doc.splitTextToSize(disclaimerText, 180);
+    doc.text(splitDisclaimer, 14, currentY);
+
     doc.save(`${tableName}.pdf`);
   };
 
