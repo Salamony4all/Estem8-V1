@@ -41,7 +41,7 @@ const prompt = ai.definePrompt({
 
 You will receive a PDF document as a data URI. Your task is to identify and extract all tables from the document.
 
-For each table, identify the column names and all rows of data. It is crucial that you include all summary rows at the end of the table, such as Subtotal, Total, Discounts, VAT (or sales tax), and especially the Grand Total.
+For each table, identify the column names and all rows of data. It is crucial that you extract every single row, from the first item to the final Grand Total. Do not omit any rows. Include all summary rows at the end of the table, such as Subtotal, Total, Discounts, VAT (or sales tax), and especially the Grand Total.
 
 If the table contains numeric values in a "Total" or "Amount" column but does not explicitly state the Total, VAT, and Grand Total, you must calculate them.
 1. Calculate the 'Total' by summing up the values in the main amount column for all items.
