@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Icons } from '@/components/icons';
 import { FileUploader } from '@/components/file-uploader';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, Wand2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TableViewer } from '@/components/table-viewer';
 import { CostingCard } from '@/components/costing-card';
@@ -18,6 +18,7 @@ export default function Home() {
   const [tables, setTables] = useState<Table[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showQuotation, setShowQuotation] = useState(false);
   const { toast } = useToast();
 
   const [netMargin, setNetMargin] = useState(10);
@@ -29,6 +30,7 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     setTables(null);
+    setShowQuotation(false);
 
     try {
       const reader = new FileReader();
@@ -69,6 +71,7 @@ export default function Home() {
     setTables(null);
     setError(null);
     setIsLoading(false);
+    setShowQuotation(false);
   };
 
   const renderContent = () => {
@@ -98,49 +101,51 @@ export default function Home() {
     if (tables) {
       const costingFactors = { netMargin, freight, customs, installation };
       return (
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div className="flex justify-end">
             <Button onClick={handleReset}>Process Another File</Button>
           </div>
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-            <div className="lg:col-span-1">
-              <CostingCard
-                costingFactors={costingFactors}
-                setters={{ setNetMargin, setFreight, setCustoms, setInstallation }}
-              />
-            </div>
-            <div className="lg:col-span-2">
-              <Tabs defaultValue="table-0" className="w-full">
-                <TabsList
-                  className="grid w-full grid-cols-1"
-                  style={{ gridTemplateColumns: `repeat(${tables.length}, minmax(0, 1fr))` }}
-                >
-                  {tables.map((_, index) => (
-                    <TabsTrigger key={index} value={`table-${index}`}>
-                      Extracted Table {index + 1}
-                    </TabsTrigger>
-                  ))}
-                  <TabsTrigger value="quotation-table">Quotation</TabsTrigger>
-                </TabsList>
-                {tables.map((table, index) => (
-                  <TabsContent key={index} value={`table-${index}`}>
-                    <TableViewer
-                      initialTable={table}
-                      tableId={`table-${index}`}
-                      isQuotation={false}
-                    />
-                  </TabsContent>
-                ))}
-                <TabsContent value="quotation-table">
-                  <TableViewer
-                    initialTable={tables[0]}
-                    tableId="quotation-table"
-                    costingFactors={costingFactors}
-                    isQuotation={true}
-                  />
-                </TabsContent>
-              </Tabs>
-            </div>
+
+          <Tabs defaultValue="table-0" className="w-full">
+            <TabsList
+              className="grid w-full grid-cols-1"
+              style={{ gridTemplateColumns: `repeat(${tables.length}, minmax(0, 1fr))` }}
+            >
+              {tables.map((_, index) => (
+                <TabsTrigger key={index} value={`table-${index}`}>
+                  Extracted Table {index + 1}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {tables.map((table, index) => (
+              <TabsContent key={index} value={`table-${index}`}>
+                <TableViewer initialTable={table} tableId={`table-${index}`} isQuotation={false} />
+              </TabsContent>
+            ))}
+          </Tabs>
+
+          <CostingCard
+            costingFactors={costingFactors}
+            setters={{ setNetMargin, setFreight, setCustoms, setInstallation }}
+          />
+
+          <div className="flex flex-col items-center gap-6">
+            {!showQuotation && (
+              <Button size="lg" onClick={() => setShowQuotation(true)}>
+                <Wand2 className="mr-2 h-5 w-5" />
+                Generate Quotation
+              </Button>
+            )}
+            {showQuotation && (
+              <div className="w-full">
+                <TableViewer
+                  initialTable={tables[0]}
+                  tableId="quotation-table"
+                  costingFactors={costingFactors}
+                  isQuotation={true}
+                />
+              </div>
+            )}
           </div>
         </div>
       );
