@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, type KeyboardEvent } from 'react';
+import { useState, useMemo, type KeyboardEvent, useEffect } from 'react';
 import type { ExtractTablesFromPdfOutput } from '@/ai/flows/extract-tables-from-pdf';
 import { suggestColumnNames } from '@/ai/flows/suggest-column-names';
 import {
@@ -29,36 +29,23 @@ type TableData = ExtractTablesFromPdfOutput['tables'][0];
 interface TableViewerProps {
   initialTable: TableData;
   tableId: string;
-  isQuotation: boolean;
-  costingFactors?: {
-    netMargin: number;
-    freight: number;
-    customs: number;
-    installation: number;
-  };
+  isQuotation?: boolean;
 }
-
-const findAmountColumn = (columnNames: string[]): number => {
-  const possibleNames = ['amount', 'price', 'total', 'cost'];
-  let amountIndex = -1;
-  for (const name of possibleNames) {
-    amountIndex = columnNames.findIndex((col) => col.toLowerCase().includes(name));
-    if (amountIndex !== -1) break;
-  }
-  return amountIndex === -1 ? columnNames.length - 1 : amountIndex;
-};
 
 export function TableViewer({
   initialTable,
   tableId,
-  isQuotation,
-  costingFactors,
+  isQuotation = false,
 }: TableViewerProps) {
   const [tableData, setTableData] = useState<TableData>(initialTable);
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
   const [editingHeader, setEditingHeader] = useState<number | null>(null);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setTableData(initialTable);
+  }, [initialTable]);
 
   const handleCellChange = (row: number, col: number, value: string) => {
     const newRows = [...tableData.rows];
@@ -127,38 +114,9 @@ export function TableViewer({
     }
   };
 
-  const processedTable = useMemo(() => {
-    if (!isQuotation || !costingFactors) {
-      return tableData;
-    }
-
-    const amountIndex = findAmountColumn(tableData.columnNames);
-    if (amountIndex === -1) return tableData;
-
-    const newRows = tableData.rows.map((row) => {
-      const newRow = [...row];
-      const amountStr = newRow[amountIndex]?.replace(/[^0-9.-]+/g, '');
-      const amount = parseFloat(amountStr);
-
-      if (!isNaN(amount)) {
-        const { netMargin, freight, customs, installation } = costingFactors;
-        const finalAmount =
-          amount *
-          (1 + netMargin / 100) *
-          (1 + freight / 100) *
-          (1 + customs / 100) *
-          (1 + installation / 100);
-        newRow[amountIndex] = finalAmount.toFixed(2);
-      }
-      return newRow;
-    });
-
-    return { ...tableData, rows: newRows };
-  }, [tableData, isQuotation, costingFactors]);
-
   const nonEmptyRows = useMemo(
-    () => processedTable.rows.filter((row) => row.some((cell) => cell.trim() !== '')),
-    [processedTable.rows]
+    () => tableData.rows.filter((row) => row.some((cell) => cell.trim() !== '')),
+    [tableData.rows]
   );
 
   return (
@@ -194,7 +152,7 @@ export function TableViewer({
           <Table>
             <TableHeader>
               <TableRow>
-                {processedTable.columnNames.map((name, colIndex) => (
+                {tableData.columnNames.map((name, colIndex) => (
                   <TableHead
                     key={colIndex}
                     onDoubleClick={() => !isQuotation && setEditingHeader(colIndex)}

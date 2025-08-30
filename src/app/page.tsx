@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { ExtractTablesFromPdfOutput } from '@/ai/flows/extract-tables-from-pdf';
 import { extractTablesFromPdf } from '@/ai/flows/extract-tables-from-pdf';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Loader2, AlertTriangle, Wand2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TableViewer } from '@/components/table-viewer';
 import { CostingCard } from '@/components/costing-card';
+import { ExportCard } from '@/components/export-card';
 
 type Table = ExtractTablesFromPdfOutput['tables'][0];
 
@@ -74,6 +75,46 @@ export default function Home() {
     setShowQuotation(false);
   };
 
+  const findAmountColumn = (columnNames: string[]): number => {
+    const possibleNames = ['amount', 'price', 'total', 'cost'];
+    let amountIndex = -1;
+    for (const name of possibleNames) {
+      amountIndex = columnNames.findIndex((col) => col.toLowerCase().includes(name));
+      if (amountIndex !== -1) break;
+    }
+    return amountIndex === -1 ? columnNames.length - 1 : amountIndex;
+  };
+
+  const quotationTable = useMemo(() => {
+    if (!tables) return null;
+
+    const costingFactors = { netMargin, freight, customs, installation };
+    const initialTable = tables[0];
+
+    const amountIndex = findAmountColumn(initialTable.columnNames);
+    if (amountIndex === -1) return initialTable;
+
+    const newRows = initialTable.rows.map((row) => {
+      const newRow = [...row];
+      const amountStr = newRow[amountIndex]?.replace(/[^0-9.-]+/g, '');
+      const amount = parseFloat(amountStr);
+
+      if (!isNaN(amount)) {
+        const { netMargin, freight, customs, installation } = costingFactors;
+        const finalAmount =
+          amount *
+          (1 + netMargin / 100) *
+          (1 + freight / 100) *
+          (1 + customs / 100) *
+          (1 + installation / 100);
+        newRow[amountIndex] = finalAmount.toFixed(2);
+      }
+      return newRow;
+    });
+
+    return { ...initialTable, rows: newRows };
+  }, [tables, netMargin, freight, customs, installation]);
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -119,7 +160,7 @@ export default function Home() {
             </TabsList>
             {tables.map((table, index) => (
               <TabsContent key={index} value={`table-${index}`}>
-                <TableViewer initialTable={table} tableId={`table-${index}`} isQuotation={false} />
+                <TableViewer initialTable={table} tableId={`table-${index}`} />
               </TabsContent>
             ))}
           </Tabs>
@@ -136,13 +177,16 @@ export default function Home() {
                 Generate Quotation
               </Button>
             )}
-            {showQuotation && (
-              <div className="w-full">
+            {showQuotation && quotationTable && (
+              <div className="w-full space-y-8">
                 <TableViewer
-                  initialTable={tables[0]}
+                  initialTable={quotationTable}
                   tableId="quotation-table"
-                  costingFactors={costingFactors}
-                  isQuotation={true}
+                  isQuotation
+                />
+                <ExportCard
+                  tableData={quotationTable}
+                  tableName="quotation"
                 />
               </div>
             )}
