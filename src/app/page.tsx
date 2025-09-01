@@ -120,54 +120,47 @@ export default function Home() {
     const initialTable = JSON.parse(JSON.stringify(tables[0]));
   
     const qtyIndex = findColumnIndex(initialTable.columnNames, ['qty', 'quantity']);
-    const rateIndex = findColumnIndex(initialTable.columnNames, ['rate', 'price']);
+    const rateIndex = findColumnIndex(initialTable.columnNames, ['rate', 'price', 'unit price']);
     const amountIndex = findColumnIndex(initialTable.columnNames, ['amount', 'total']);
   
-    if (amountIndex === -1) return initialTable;
+    if (rateIndex === -1 || amountIndex === -1) return initialTable;
   
     const exchangeRate = toCurrency.rate / fromCurrency.rate;
   
-    const newRows = initialTable.rows.map((row) => {
+    const newRows = initialTable.rows.map((row: string[]) => {
       const newRow = [...row];
-      let itemTotal = 0;
-  
-      // Check for summary rows and skip calculation
+      
       const isSummaryRow = row.some(cell => 
         cell.toLowerCase().includes('total') || cell.toLowerCase().includes('vat')
       );
   
       if (!isSummaryRow) {
-        if (qtyIndex !== -1 && rateIndex !== -1) {
-          const qtyStr = newRow[qtyIndex]?.replace(/[^0-9.-]+/g, '');
-          const rateStr = newRow[rateIndex]?.replace(/[^0-9.-]+/g, '');
-          const qty = parseFloat(qtyStr);
-          const rate = parseFloat(rateStr);
+        const rateStr = newRow[rateIndex]?.replace(/[^0-9.-]+/g, '');
+        let rate = parseFloat(rateStr);
   
-          if (!isNaN(qty) && !isNaN(rate)) {
-            itemTotal = qty * rate;
-          }
-        } else {
-          const amountStr = newRow[amountIndex]?.replace(/[^0-9.-]+/g, '');
-          const amount = parseFloat(amountStr);
-          if (!isNaN(amount)) {
-            itemTotal = amount;
-          }
-        }
-  
-        if (itemTotal > 0) {
+        if (!isNaN(rate)) {
           const { netMargin, freight, customs, installation } = costingFactors;
-          const finalAmount =
-            itemTotal *
+          const finalRate =
+            rate *
             (1 + netMargin / 100) *
             (1 + freight / 100) *
             (1 + customs / 100) *
             (1 + installation / 100);
           
-          const exchangedAmount = finalAmount * exchangeRate;
-          newRow[amountIndex] = exchangedAmount.toFixed(2);
+          const exchangedRate = finalRate * exchangeRate;
+          newRow[rateIndex] = exchangedRate.toFixed(2);
+  
+          if (qtyIndex !== -1) {
+            const qtyStr = newRow[qtyIndex]?.replace(/[^0-9.-]+/g, '');
+            const qty = parseFloat(qtyStr);
+            if (!isNaN(qty)) {
+              newRow[amountIndex] = (qty * exchangedRate).toFixed(2);
+            }
+          } else {
+             newRow[amountIndex] = exchangedRate.toFixed(2);
+          }
         }
       } else {
-        // For summary rows, just apply currency conversion if there's a value
         const amountStr = newRow[amountIndex]?.replace(/[^0-9.-]+/g, '');
         const amount = parseFloat(amountStr);
         if (!isNaN(amount)) {
