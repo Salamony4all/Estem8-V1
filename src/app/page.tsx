@@ -105,47 +105,79 @@ export default function Home() {
     setShowQuotation(false);
   };
 
-  const findAmountColumn = (columnNames: string[]): number => {
-    const possibleNames = ['amount', 'price', 'total', 'cost'];
-    let amountIndex = -1;
+  const findColumnIndex = (columnNames: string[], possibleNames: string[]): number => {
     for (const name of possibleNames) {
-      amountIndex = columnNames.findIndex((col) => col.toLowerCase().includes(name));
-      if (amountIndex !== -1) break;
+      const index = columnNames.findIndex((col) => col.toLowerCase().includes(name));
+      if (index !== -1) return index;
     }
-    return amountIndex === -1 ? columnNames.length - 1 : amountIndex;
+    return -1;
   };
-
+  
   const quotationTable = useMemo(() => {
     if (!tables) return null;
-
+  
     const costingFactors = { netMargin, freight, customs, installation };
-    const initialTable = tables[0];
-
-    const amountIndex = findAmountColumn(initialTable.columnNames);
+    const initialTable = JSON.parse(JSON.stringify(tables[0]));
+  
+    const qtyIndex = findColumnIndex(initialTable.columnNames, ['qty', 'quantity']);
+    const rateIndex = findColumnIndex(initialTable.columnNames, ['rate', 'price']);
+    const amountIndex = findColumnIndex(initialTable.columnNames, ['amount', 'total']);
+  
     if (amountIndex === -1) return initialTable;
-
+  
     const exchangeRate = toCurrency.rate / fromCurrency.rate;
-
+  
     const newRows = initialTable.rows.map((row) => {
       const newRow = [...row];
-      const amountStr = newRow[amountIndex]?.replace(/[^0-9.-]+/g, '');
-      const amount = parseFloat(amountStr);
-
-      if (!isNaN(amount)) {
-        const { netMargin, freight, customs, installation } = costingFactors;
-        const finalAmount =
-          amount *
-          (1 + netMargin / 100) *
-          (1 + freight / 100) *
-          (1 + customs / 100) *
-          (1 + installation / 100);
-        
-        const exchangedAmount = finalAmount * exchangeRate;
-        newRow[amountIndex] = exchangedAmount.toFixed(2);
+      let itemTotal = 0;
+  
+      // Check for summary rows and skip calculation
+      const isSummaryRow = row.some(cell => 
+        cell.toLowerCase().includes('total') || cell.toLowerCase().includes('vat')
+      );
+  
+      if (!isSummaryRow) {
+        if (qtyIndex !== -1 && rateIndex !== -1) {
+          const qtyStr = newRow[qtyIndex]?.replace(/[^0-9.-]+/g, '');
+          const rateStr = newRow[rateIndex]?.replace(/[^0-9.-]+/g, '');
+          const qty = parseFloat(qtyStr);
+          const rate = parseFloat(rateStr);
+  
+          if (!isNaN(qty) && !isNaN(rate)) {
+            itemTotal = qty * rate;
+          }
+        } else {
+          const amountStr = newRow[amountIndex]?.replace(/[^0-9.-]+/g, '');
+          const amount = parseFloat(amountStr);
+          if (!isNaN(amount)) {
+            itemTotal = amount;
+          }
+        }
+  
+        if (itemTotal > 0) {
+          const { netMargin, freight, customs, installation } = costingFactors;
+          const finalAmount =
+            itemTotal *
+            (1 + netMargin / 100) *
+            (1 + freight / 100) *
+            (1 + customs / 100) *
+            (1 + installation / 100);
+          
+          const exchangedAmount = finalAmount * exchangeRate;
+          newRow[amountIndex] = exchangedAmount.toFixed(2);
+        }
+      } else {
+        // For summary rows, just apply currency conversion if there's a value
+        const amountStr = newRow[amountIndex]?.replace(/[^0-9.-]+/g, '');
+        const amount = parseFloat(amountStr);
+        if (!isNaN(amount)) {
+            const exchangedAmount = amount * exchangeRate;
+            newRow[amountIndex] = exchangedAmount.toFixed(2);
+        }
       }
       return newRow;
     });
-
+  
     return { ...initialTable, rows: newRows };
   }, [tables, netMargin, freight, customs, installation, fromCurrency, toCurrency]);
 
