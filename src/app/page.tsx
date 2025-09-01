@@ -123,7 +123,7 @@ export default function Home() {
     const rateIndex = findColumnIndex(initialTable.columnNames, ['rate', 'price', 'unit price']);
     const amountIndex = findColumnIndex(initialTable.columnNames, ['amount', 'total']);
   
-    if (rateIndex === -1 || amountIndex === -1) return initialTable;
+    if (rateIndex === -1) return initialTable; // Cannot proceed without a rate column.
   
     const exchangeRate = toCurrency.rate / fromCurrency.rate;
   
@@ -151,14 +151,14 @@ export default function Home() {
         newRow[rateIndex] = exchangedRate.toFixed(2);
 
         let itemTotal = exchangedRate;
-        if (qtyIndex !== -1) {
+        if (qtyIndex !== -1 && amountIndex !== -1) {
           const qtyStr = newRow[qtyIndex]?.replace(/[^0-9.-]+/g, '');
           const qty = parseFloat(qtyStr);
           if (!isNaN(qty)) {
             itemTotal = qty * exchangedRate;
           }
+           newRow[amountIndex] = itemTotal.toFixed(2);
         }
-        newRow[amountIndex] = itemTotal.toFixed(2);
         newTotal += itemTotal;
       }
       return newRow;
@@ -171,19 +171,21 @@ export default function Home() {
     const descriptionIndex = 0;
 
     const totalRow = new Array(numColumns).fill('');
-    totalRow[descriptionIndex] = 'Total';
-    totalRow[amountIndex] = newTotal.toFixed(2);
-    finalRows.push(totalRow);
+    if (amountIndex !== -1) {
+      totalRow[descriptionIndex] = 'Total';
+      totalRow[amountIndex] = newTotal.toFixed(2);
+      finalRows.push(totalRow);
 
-    const vatRow = new Array(numColumns).fill('');
-    vatRow[descriptionIndex] = 'VAT 5%';
-    vatRow[amountIndex] = newVat.toFixed(2);
-    finalRows.push(vatRow);
+      const vatRow = new Array(numColumns).fill('');
+      vatRow[descriptionIndex] = 'VAT 5%';
+      vatRow[amountIndex] = newVat.toFixed(2);
+      finalRows.push(vatRow);
 
-    const grandTotalRow = new Array(numColumns).fill('');
-    grandTotalRow[descriptionIndex] = 'Grand Total';
-    grandTotalRow[amountIndex] = grandTotal.toFixed(2);
-    finalRows.push(grandTotalRow);
+      const grandTotalRow = new Array(numColumns).fill('');
+      grandTotalRow[descriptionIndex] = 'Grand Total';
+      grandTotalRow[amountIndex] = grandTotal.toFixed(2);
+      finalRows.push(grandTotalRow);
+    }
   
     return { ...initialTable, rows: finalRows };
   }, [tables, netMargin, freight, customs, installation, fromCurrency, toCurrency]);
