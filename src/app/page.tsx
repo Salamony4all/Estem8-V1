@@ -127,51 +127,59 @@ export default function Home() {
   
     const exchangeRate = toCurrency.rate / fromCurrency.rate;
   
-    const newRows = initialTable.rows.map((row: string[]) => {
+    let newTotal = 0;
+  
+    const itemRows = initialTable.rows.filter((row: string[]) => 
+      !row.some(cell => cell.toLowerCase().includes('total') || cell.toLowerCase().includes('vat'))
+    );
+
+    const updatedItemRows = itemRows.map((row: string[]) => {
       const newRow = [...row];
-      
-      const isSummaryRow = row.some(cell => 
-        cell.toLowerCase().includes('total') || cell.toLowerCase().includes('vat')
-      );
-  
-      if (!isSummaryRow) {
-        const rateStr = newRow[rateIndex]?.replace(/[^0-9.-]+/g, '');
-        let rate = parseFloat(rateStr);
-  
-        if (!isNaN(rate)) {
-          const { netMargin, freight, customs, installation } = costingFactors;
-          const finalRate =
-            rate *
-            (1 + netMargin / 100) *
-            (1 + freight / 100) *
-            (1 + customs / 100) *
-            (1 + installation / 100);
-          
-          const exchangedRate = finalRate * exchangeRate;
-          newRow[rateIndex] = exchangedRate.toFixed(2);
-  
-          if (qtyIndex !== -1) {
-            const qtyStr = newRow[qtyIndex]?.replace(/[^0-9.-]+/g, '');
-            const qty = parseFloat(qtyStr);
-            if (!isNaN(qty)) {
-              newRow[amountIndex] = (qty * exchangedRate).toFixed(2);
-            }
-          } else {
-             newRow[amountIndex] = exchangedRate.toFixed(2);
+      const rateStr = newRow[rateIndex]?.replace(/[^0-9.-]+/g, '');
+      let rate = parseFloat(rateStr);
+
+      if (!isNaN(rate)) {
+        const { netMargin, freight, customs, installation } = costingFactors;
+        const finalRate =
+          rate *
+          (1 + netMargin / 100) *
+          (1 + freight / 100) *
+          (1 + customs / 100) *
+          (1 + installation / 100);
+        
+        const exchangedRate = finalRate * exchangeRate;
+        newRow[rateIndex] = exchangedRate.toFixed(2);
+
+        let itemTotal = exchangedRate;
+        if (qtyIndex !== -1) {
+          const qtyStr = newRow[qtyIndex]?.replace(/[^0-9.-]+/g, '');
+          const qty = parseFloat(qtyStr);
+          if (!isNaN(qty)) {
+            itemTotal = qty * exchangedRate;
           }
         }
-      } else {
-        const amountStr = newRow[amountIndex]?.replace(/[^0-9.-]+/g, '');
-        const amount = parseFloat(amountStr);
-        if (!isNaN(amount)) {
-            const exchangedAmount = amount * exchangeRate;
-            newRow[amountIndex] = exchangedAmount.toFixed(2);
-        }
+        newRow[amountIndex] = itemTotal.toFixed(2);
+        newTotal += itemTotal;
       }
       return newRow;
     });
+    
+    const newVat = newTotal * 0.05;
+    const finalRows = [...updatedItemRows];
+    const numColumns = initialTable.columnNames.length;
+    const descriptionIndex = 0;
+
+    const totalRow = new Array(numColumns).fill('');
+    totalRow[descriptionIndex] = 'Total';
+    totalRow[amountIndex] = newTotal.toFixed(2);
+    finalRows.push(totalRow);
+
+    const vatRow = new Array(numColumns).fill('');
+    vatRow[descriptionIndex] = 'VAT 5%';
+    vatRow[amountIndex] = newVat.toFixed(2);
+    finalRows.push(vatRow);
   
-    return { ...initialTable, rows: newRows };
+    return { ...initialTable, rows: finalRows };
   }, [tables, netMargin, freight, customs, installation, fromCurrency, toCurrency]);
 
   const renderContent = () => {
