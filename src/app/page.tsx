@@ -165,6 +165,7 @@ export default function Home() {
     });
     
     const newVat = newTotal * 0.05;
+    const grandTotal = newTotal + newVat;
     const finalRows = [...updatedItemRows];
     const numColumns = initialTable.columnNames.length;
     const descriptionIndex = 0;
@@ -178,6 +179,11 @@ export default function Home() {
     vatRow[descriptionIndex] = 'VAT 5%';
     vatRow[amountIndex] = newVat.toFixed(2);
     finalRows.push(vatRow);
+
+    const grandTotalRow = new Array(numColumns).fill('');
+    grandTotalRow[descriptionIndex] = 'Grand Total';
+    grandTotalRow[amountIndex] = grandTotal.toFixed(2);
+    finalRows.push(grandTotalRow);
   
     return { ...initialTable, rows: finalRows };
   }, [tables, netMargin, freight, customs, installation, fromCurrency, toCurrency]);
