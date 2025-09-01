@@ -166,7 +166,7 @@ export function CostingCard({
               <SelectContent>
                 {currencies.map((c) => (
                   <SelectItem key={c.code} value={c.code}>
-                    {c.code} ({c.symbol})
+                    {c.symbol}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -184,7 +184,7 @@ export function CostingCard({
               <SelectContent>
                 {currencies.map((c) => (
                   <SelectItem key={c.code} value={c.code}>
-                    {c.code} ({c.symbol})
+                    {c.symbol}
                   </SelectItem>
                 ))}
               </SelectContent>
