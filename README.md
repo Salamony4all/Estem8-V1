@@ -27,10 +27,13 @@ A Next.js application for extracting tables from PDFs and generating quotations 
 
 ## Getting Started
 
+📚 **New to this app?** Start with the [Quick Start Guide](docs/QUICK_START.md)
+
 ### Prerequisites
 
 - Node.js 18+ 
 - npm or yarn
+- (Optional) Python 3.8+ for native PaddleOCR extraction
 
 ### Installation
 
