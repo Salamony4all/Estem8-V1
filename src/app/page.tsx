@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import type { ExtractTablesFromPdfOutput } from '@/ai/flows/extract-tables-from-pdf';
 import { extractTablesFromPdf } from '@/ai/flows/extract-tables-from-pdf';
+import { extractTablesFromPdfPaddleOCR } from '@/ai/flows/extract-tables-from-pdf-paddleocr';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Icons } from '@/components/icons';
@@ -13,6 +14,8 @@ import { TableViewer } from '@/components/table-viewer';
 import { CostingCard } from '@/components/costing-card';
 import { ExportCard } from '@/components/export-card';
 import { ClientDetailsCard } from '@/components/client-details-card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 
 type Table = ExtractTablesFromPdfOutput['tables'][0];
@@ -34,6 +37,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showQuotation, setShowQuotation] = useState(false);
+  const [extractionMethod, setExtractionMethod] = useState<'ai' | 'paddleocr-api' | 'paddleocr-native'>('paddleocr-api');
   const { toast } = useToast();
 
   const [netMargin, setNetMargin] = useState(10);
@@ -68,23 +72,42 @@ export default function Home() {
       reader.onload = async (e) => {
         const pdfDataUri = e.target?.result as string;
         try {
-          const result = await extractTablesFromPdf({ pdfDataUri });
+          let result;
+          
+          // Use selected extraction method
+          if (extractionMethod === 'ai') {
+            result = await extractTablesFromPdf({ pdfDataUri });
+          } else {
+            // Use PaddleOCR method (api or native)
+            const method = extractionMethod === 'paddleocr-native' ? 'native' : 'api';
+            result = await extractTablesFromPdfPaddleOCR({ 
+              pdfDataUri, 
+              method,
+              // You can add API key from environment variable if needed
+              apiKey: process.env.NEXT_PUBLIC_PADDLEOCR_API_KEY,
+            });
+          }
+          
           if (result.tables && result.tables.length > 0) {
             setTables(result.tables);
+            const methodName = extractionMethod === 'ai' ? 'AI' : 
+                             extractionMethod === 'paddleocr-native' ? 'PaddleOCR (Native)' : 
+                             'PaddleOCR (API)';
             toast({
               title: 'Success!',
-              description: `Extracted ${result.tables.length} table(s) from your PDF.`,
+              description: `Extracted ${result.tables.length} table(s) from your PDF using ${methodName}.`,
             });
           } else {
             setError('No tables could be found in the provided PDF.');
           }
-        } catch (aiError) {
-          console.error(aiError);
-          setError('An AI processing error occurred. Please try another file.');
+        } catch (extractionError) {
+          console.error(extractionError);
+          const errorMessage = extractionError instanceof Error ? extractionError.message : 'An error occurred';
+          setError(`Extraction error: ${errorMessage}`);
           toast({
             variant: 'destructive',
             title: 'Uh oh! Something went wrong.',
-            description: 'There was a problem with the AI model.',
+            description: errorMessage,
           });
         } finally {
           setIsLoading(false);
@@ -288,7 +311,52 @@ export default function Home() {
       );
     }
 
-    return <FileUploader onFileUpload={handleFileUpload} disabled={isLoading} />;
+    return (
+      <div className="space-y-6">
+        <div className="rounded-lg border p-6 bg-card">
+          <Label htmlFor="extraction-method" className="text-base font-semibold mb-2 block">
+            Extraction Method
+          </Label>
+          <Select 
+            value={extractionMethod} 
+            onValueChange={(value: any) => setExtractionMethod(value)}
+          >
+            <SelectTrigger id="extraction-method" className="w-full">
+              <SelectValue placeholder="Select extraction method" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="paddleocr-api">
+                <div className="flex flex-col items-start">
+                  <span className="font-semibold">PaddleOCR (API) - Recommended</span>
+                  <span className="text-xs text-muted-foreground">100% accurate OCR using PP-Structure V3 cloud service</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="paddleocr-native">
+                <div className="flex flex-col items-start">
+                  <span className="font-semibold">PaddleOCR (Native)</span>
+                  <span className="text-xs text-muted-foreground">Local processing (requires PaddleOCR service running)</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="ai">
+                <div className="flex flex-col items-start">
+                  <span className="font-semibold">AI-based (Legacy)</span>
+                  <span className="text-xs text-muted-foreground">Uses Google Gemini for extraction</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground mt-2">
+            {extractionMethod === 'paddleocr-api' && 
+              'Fast cloud-based processing with 1:1 replication accuracy using PaddleOCR PP-Structure V3.'}
+            {extractionMethod === 'paddleocr-native' && 
+              'Local processing for privacy and offline use. Ensure PaddleOCR service is running on localhost:8866.'}
+            {extractionMethod === 'ai' && 
+              'AI-powered extraction using Google Gemini. May not be as accurate as PaddleOCR.'}
+          </p>
+        </div>
+        <FileUploader onFileUpload={handleFileUpload} disabled={isLoading} />
+      </div>
+    );
   };
 
   return (
