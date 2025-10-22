@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import type { ExtractTablesFromPdfOutput } from '@/ai/flows/extract-tables-from-pdf';
 import { extractTablesFromPdf } from '@/ai/flows/extract-tables-from-pdf';
 import { extractTablesFromPdfPaddleOCR } from '@/ai/flows/extract-tables-from-pdf-paddleocr';
-import { extractTablesFromPdfGradio } from '@/ai/flows/extract-tables-from-pdf-gradio';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -88,11 +87,24 @@ export default function Home() {
           if (extractionMethod === 'ai') {
             result = await extractTablesFromPdf({ pdfDataUri });
           } else if (extractionMethod === 'paddleocr-gradio') {
-            // Use new Gradio API method
-            result = await extractTablesFromPdfGradio({ 
-              pdfDataUri,
-              useChartRecognition,
+            // Use Gradio API via API route to avoid server action issues
+            const response = await fetch('/api/extract-tables-gradio', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                pdfDataUri,
+                useChartRecognition,
+              }),
             });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Failed to extract tables');
+            }
+
+            result = await response.json();
             
             // Store additional Gradio outputs
             if ('markdown' in result) {
