@@ -65,6 +65,8 @@ npm run dev
 
 The application will be available at `http://localhost:9002`.
 
+> **Note for GitHub Codespaces/Forwarded Hosts**: The application is configured to work properly with forwarded hosts (like GitHub Codespaces). Server Actions will work correctly even when accessed through forwarded URLs.
+
 ## OCR Extraction Methods
 
 The application supports three extraction methods:

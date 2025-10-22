@@ -2,6 +2,22 @@
 
 All notable changes to the Estem8-V1 project will be documented in this file.
 
+## [2.0.1] - 2025-10-22
+
+### 🔧 Fixed
+
+#### Development Environment
+- **Server Actions Header Mismatch Fix** - Fixed `Invalid Server Actions request` error in development environments
+  - Error occurred when accessing the app through forwarded hosts (GitHub Codespaces, port forwarding, etc.)
+  - Mismatch between `x-forwarded-host` header and `origin` header caused Next.js 15 to reject Server Actions requests
+  - Added `experimental.serverActions.allowedOrigins` configuration to `next.config.js`
+  - Allows both `localhost:9002` and `*.app.github.dev` origins
+  - Ensures Server Actions work correctly in both local and Codespaces environments
+  
+#### Documentation
+- Added troubleshooting section for Server Actions header mismatch in QUICK_START.md
+- Added note about GitHub Codespaces/forwarded hosts support in README.md
+
 ## [2.0.0] - 2025-10-22
 
 ### 🎉 Major Release: PaddleOCR PP-Structure V3 Integration

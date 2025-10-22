@@ -199,6 +199,14 @@ For detailed setup instructions, see [PaddleOCR Setup Guide](PADDLEOCR_SETUP.md)
 **Issue**: Incorrect currency conversion
 - **Solution**: Verify the "From" and "To" currency selections
 
+**Issue**: Server Actions error with header mismatch (GitHub Codespaces/forwarded hosts)
+- **Error message**: `x-forwarded-host header does not match origin header from a forwarded Server Actions request`
+- **Solution**: This is already fixed in the configuration. The application now allows forwarded origins from GitHub Codespaces and similar environments. If you're still experiencing this issue:
+  1. Make sure you're using the latest version of the code
+  2. Restart your development server
+  3. Clear your browser cache
+- **Technical details**: Next.js 15 has stricter security checks for Server Actions. The fix adds the `experimental.serverActions.allowedOrigins` configuration to allow both localhost and forwarded hosts like `*.app.github.dev`
+
 ### Getting Help
 
 1. Check the [PaddleOCR Setup Guide](PADDLEOCR_SETUP.md)
