@@ -54,7 +54,10 @@ async function extractWithPaddleOCRAPI(
     
     // Call PaddleOCR API endpoint
     // Using the community app API: https://aistudio.baidu.com/application/detail/98365
-    const apiUrl = 'https://aistudio.baidu.com/api/pp-structure/v3/extract';
+    // Note: The API endpoint may need to be updated based on your access level
+    // See docs/API_ENDPOINTS.md for details
+    const apiUrl = process.env.NEXT_PUBLIC_PADDLEOCR_API_URL || 
+                   'https://aistudio.baidu.com/api/pp-structure/v3/extract';
     
     const response = await fetch(apiUrl, {
       method: 'POST',
