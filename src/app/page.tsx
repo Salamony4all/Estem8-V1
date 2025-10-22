@@ -4,7 +4,9 @@ import { useState, useMemo } from 'react';
 import type { ExtractTablesFromPdfOutput } from '@/ai/flows/extract-tables-from-pdf';
 import { extractTablesFromPdf } from '@/ai/flows/extract-tables-from-pdf';
 import { extractTablesFromPdfPaddleOCR } from '@/ai/flows/extract-tables-from-pdf-paddleocr';
+import { extractTablesFromPdfGradio } from '@/ai/flows/extract-tables-from-pdf-gradio';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Icons } from '@/components/icons';
 import { FileUploader } from '@/components/file-uploader';
@@ -16,6 +18,7 @@ import { ExportCard } from '@/components/export-card';
 import { ClientDetailsCard } from '@/components/client-details-card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 
 type Table = ExtractTablesFromPdfOutput['tables'][0];
@@ -37,7 +40,11 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showQuotation, setShowQuotation] = useState(false);
-  const [extractionMethod, setExtractionMethod] = useState<'ai' | 'paddleocr-api' | 'paddleocr-native'>('paddleocr-api');
+  const [extractionMethod, setExtractionMethod] = useState<'ai' | 'paddleocr-api' | 'paddleocr-native' | 'paddleocr-gradio'>('paddleocr-gradio');
+  const [visualizationHtml, setVisualizationHtml] = useState<string | null>(null);
+  const [markdownContent, setMarkdownContent] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [useChartRecognition, setUseChartRecognition] = useState(false);
   const { toast } = useToast();
 
   const [netMargin, setNetMargin] = useState(10);
@@ -66,6 +73,9 @@ export default function Home() {
     setError(null);
     setTables(null);
     setShowQuotation(false);
+    setVisualizationHtml(null);
+    setMarkdownContent(null);
+    setUploadedFile(file);
 
     try {
       const reader = new FileReader();
@@ -77,6 +87,20 @@ export default function Home() {
           // Use selected extraction method
           if (extractionMethod === 'ai') {
             result = await extractTablesFromPdf({ pdfDataUri });
+          } else if (extractionMethod === 'paddleocr-gradio') {
+            // Use new Gradio API method
+            result = await extractTablesFromPdfGradio({ 
+              pdfDataUri,
+              useChartRecognition,
+            });
+            
+            // Store additional Gradio outputs
+            if ('markdown' in result) {
+              setMarkdownContent(result.markdown);
+            }
+            if ('visualizationHtml' in result) {
+              setVisualizationHtml(result.visualizationHtml || null);
+            }
           } else {
             // Use PaddleOCR method (api or native)
             const method = extractionMethod === 'paddleocr-native' ? 'native' : 'api';
@@ -92,13 +116,14 @@ export default function Home() {
             setTables(result.tables);
             const methodName = extractionMethod === 'ai' ? 'AI' : 
                              extractionMethod === 'paddleocr-native' ? 'PaddleOCR (Native)' : 
+                             extractionMethod === 'paddleocr-gradio' ? 'PaddleOCR (Gradio)' :
                              'PaddleOCR (API)';
             toast({
               title: 'Success!',
-              description: `Extracted ${result.tables.length} table(s) from your PDF using ${methodName}.`,
+              description: `Extracted ${result.tables.length} table(s) from your document using ${methodName}.`,
             });
           } else {
-            setError('No tables could be found in the provided PDF.');
+            setError('No tables could be found in the provided document.');
           }
         } catch (extractionError) {
           console.error(extractionError);
@@ -126,6 +151,9 @@ export default function Home() {
     setError(null);
     setIsLoading(false);
     setShowQuotation(false);
+    setVisualizationHtml(null);
+    setMarkdownContent(null);
+    setUploadedFile(null);
   };
 
   const findColumnIndex = (columnNames: string[], possibleNames: string[]): number => {
@@ -245,6 +273,69 @@ export default function Home() {
             <Button onClick={handleReset}>Process Another File</Button>
           </div>
 
+          {/* Show uploaded file preview */}
+          {uploadedFile && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Uploaded Document</CardTitle>
+                <CardDescription>
+                  {uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(2)} KB)
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          )}
+
+          {/* Show visualization if available (Gradio method) */}
+          {visualizationHtml && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Document Layout Visualization</CardTitle>
+                <CardDescription>
+                  Visual representation of the detected document structure
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div 
+                  className="border rounded-lg p-4 bg-white overflow-auto max-h-96"
+                  dangerouslySetInnerHTML={{ __html: visualizationHtml }}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Show markdown content if available */}
+          {markdownContent && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Extracted Content (Markdown)</CardTitle>
+                <CardDescription>
+                  Full text content extracted from the document
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gray-50 p-4 rounded-lg border max-h-64 overflow-auto">
+                  <pre className="whitespace-pre-wrap text-sm font-mono">
+                    {markdownContent}
+                  </pre>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(markdownContent);
+                    toast({
+                      title: 'Copied!',
+                      description: 'Markdown content copied to clipboard.',
+                    });
+                  }}
+                >
+                  Copy Markdown
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           <Tabs defaultValue="table-0" className="w-full">
             <TabsList
               className="grid w-full grid-cols-1"
@@ -325,9 +416,15 @@ export default function Home() {
               <SelectValue placeholder="Select extraction method" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="paddleocr-gradio">
+                <div className="flex flex-col items-start">
+                  <span className="font-semibold">PaddleOCR (Gradio) - Newest ⭐</span>
+                  <span className="text-xs text-muted-foreground">Advanced layout analysis with visualization & markdown output</span>
+                </div>
+              </SelectItem>
               <SelectItem value="paddleocr-api">
                 <div className="flex flex-col items-start">
-                  <span className="font-semibold">PaddleOCR (API) - Recommended</span>
+                  <span className="font-semibold">PaddleOCR (API)</span>
                   <span className="text-xs text-muted-foreground">100% accurate OCR using PP-Structure V3 cloud service</span>
                 </div>
               </SelectItem>
@@ -345,7 +442,27 @@ export default function Home() {
               </SelectItem>
             </SelectContent>
           </Select>
+          
+          {/* Chart recognition option for Gradio method */}
+          {extractionMethod === 'paddleocr-gradio' && (
+            <div className="flex items-center space-x-2 mt-4">
+              <Checkbox
+                id="chart-recognition"
+                checked={useChartRecognition}
+                onCheckedChange={(checked) => setUseChartRecognition(checked as boolean)}
+              />
+              <Label
+                htmlFor="chart-recognition"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Enable chart recognition (slower but more accurate for documents with charts)
+              </Label>
+            </div>
+          )}
+          
           <p className="text-sm text-muted-foreground mt-2">
+            {extractionMethod === 'paddleocr-gradio' && 
+              'Advanced document processing with full layout analysis, table extraction, and HTML visualization. Supports PDFs and images.'}
             {extractionMethod === 'paddleocr-api' && 
               'Fast cloud-based processing with 1:1 replication accuracy using PaddleOCR PP-Structure V3.'}
             {extractionMethod === 'paddleocr-native' && 
@@ -354,7 +471,11 @@ export default function Home() {
               'AI-powered extraction using Google Gemini. May not be as accurate as PaddleOCR.'}
           </p>
         </div>
-        <FileUploader onFileUpload={handleFileUpload} disabled={isLoading} />
+        <FileUploader 
+          onFileUpload={handleFileUpload} 
+          disabled={isLoading}
+          acceptImages={extractionMethod === 'paddleocr-gradio'}
+        />
       </div>
     );
   };
